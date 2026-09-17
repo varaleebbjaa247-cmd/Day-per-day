@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>จัดการตารางเรียน/ตารางงาน</title>
+    <style>
+        body { font-family: sans-serif; padding: 15px; max-width: 500px; margin: auto; background: #f4f4f9; }
+        h2 { text-align: center; color: #333; }
+        .day-group { background: #fff; padding: 12px; margin-bottom: 12px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .day-title { font-weight: bold; color: #007bff; text-transform: uppercase; margin-bottom: 8px; }
+        textarea { width: 100%; height: 110px; border: 1px solid #ccc; border-radius: 5px; padding: 6px; box-sizing: border-box; font-size: 14px; }
+        button { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        button:disabled { background: #6c757d; }
+        .input-group { margin-bottom: 8px; }
+        label { font-size: 12px; color: #666; }
+        input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+
+<h2>📅 จัดการตารางเรียน</h2>
+
+<div class="input-group">
+    <label>GitHub Personal Access Token (PAT):</label>
+    <input type="text" id="patToken" placeholder="วาง PAT Token จาก GitHub">
+</div>
+
+<div id="scheduleForm"></div>
+
+<button id="saveBtn" onclick="saveSchedule()">💾 บันทึกตารางลง GitHub</button>
+
+<script>
+    const GITHUB_USER = 'YOUR_GITHUB_USERNAME'; // 👈 เปลี่ยนเป็นชื่อผู้ใช้ GitHub ของคุณ
+    const REPO_NAME = 'Day-per-day';             // 👈 ชื่อ Repository
+    const FILE_PATH = 'schedule.json';
+    let fileSHA = '';
+
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+
+    // โหลดตารางเรียนปัจจุบัน
+    async function loadSchedule() {
+        const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${REPO_NAME}/contents/${FILE_PATH}`);
+        const data = await res.json();
+        fileSHA = data.sha;
+        const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+
+        let html = '';
+        days.forEach(day => {
+            const listText = (content[day] || []).join('\n');
+            html += `
+                <div class="day-group">
+                    <div class="day-title">${day}</div>
+                    <textarea id="${day}">${listText}</textarea>
+                </div>
+            `;
+        });
+        document.getElementById('scheduleForm').innerHTML = html;
+        
+        // ดึง Token จาก LocalStorage
+        if(localStorage.getItem('gh_pat')) {
+            document.getElementById('patToken').value = localStorage.getItem('gh_pat');
+        }
+    }
+
+    // บันทึกตารางกลับไปที่ GitHub
+    async function saveSchedule() {
+        const token = document.getElementById('patToken').value.trim();
+        if (!token) return alert('กรุณากรอก GitHub Token ก่อนบันทึก!');
+        
+        localStorage.setItem('gh_pat', token);
+        const btn = document.getElementById('saveBtn');
+        btn.disabled = true;
+        btn.innerText = 'กำลังบันทึก...';
+
+        let updatedData = {};
+        days.forEach(day => {
+            const lines = document.getElementById(day).value.split('\n').filter(line => line.trim() !== '');
+            updatedData[day] = lines;
+        });
+
+        const jsonString = JSON.stringify(updatedData, null, 2);
+        const utf8Bytes = new TextEncoder().encode(jsonString);
+        const base64Content = btoa(String.fromCharCode(...utf8Bytes));
+
+        try {
+            const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${REPO_NAME}/contents/${FILE_PATH}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: 'Update schedule via Web UI',
+                    content: base64Content,
+                    sha: fileSHA
+                })
+            });
+
+            if (res.ok) {
+                alert('✅ บันทึกตารางเรียบร้อยแล้ว!');
+                location.reload();
+            } else {
+                alert('❌ เกิดข้อผิดพลาดในการบันทึก เช็ก Token อีกครั้ง');
+            }
+        } catch (e) {
+            alert('❌ เชื่อมต่อไม่ได้: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = '💾 บันทึกตารางลง GitHub';
+        }
+    }
+
+    loadSchedule();
+</script>
+</body>
+  </html>
+  
