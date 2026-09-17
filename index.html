@@ -10,12 +10,12 @@
         .day-group { background: #fff; padding: 12px; margin-bottom: 12px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .day-title { font-weight: bold; color: #007bff; text-transform: uppercase; margin-bottom: 8px; }
         textarea { width: 100%; height: 120px; border: 1px solid #ccc; border-radius: 5px; padding: 6px; box-sizing: border-box; font-size: 14px; }
-        button { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        button { width: 100%; padding: 14px; background: #28a745; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         button:disabled { background: #6c757d; }
-        .input-group { margin-bottom: 12px; }
+        .input-group { margin-bottom: 15px; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         label { font-size: 12px; color: #666; font-weight: bold; }
-        input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-top: 4px; }
-        #statusMsg { text-align: center; color: #d9534f; margin-bottom: 10px; font-size: 14px; }
+        input[type="password"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-top: 5px; font-size: 14px; }
+        #statusMsg { text-align: center; color: #666; margin-bottom: 10px; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -23,8 +23,8 @@
 <h2>📅 จัดการตารางเรียน</h2>
 
 <div class="input-group">
-    <label>GitHub Personal Access Token (PAT):</label>
-    <input type="text" id="patToken" placeholder="วาง PAT Token จาก GitHub (ghp_...)">
+    <label>🔑 GitHub Access Token (บันทึกอัตโนมัติในเครื่องนี้):</label>
+    <input type="password" id="patToken" placeholder="วาง PAT Token (ghp_...) ครั้งแรกครั้งเดียว">
 </div>
 
 <div id="statusMsg">กำลังโหลดตารางเรียน...</div>
@@ -33,14 +33,13 @@
 <button id="saveBtn" onclick="saveSchedule()" style="display:none;">💾 บันทึกตารางลง GitHub</button>
 
 <script>
-    const GITHUB_USER = 'varaleebbjaa247-cmd'; // 👈 แก้ไขเป็น Username เรียบร้อย
+    const GITHUB_USER = 'varaleebbjaa247-cmd';
     const REPO_NAME = 'Day-per-day';
     const FILE_PATH = 'schedule.json';
-    let fileSHA = '';
 
+    let fileSHA = '';
     const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 
-    // แปลง UTF-8 สำหรับภาษาไทย
     function utf8_to_b64(str) {
         return window.btoa(unescape(encodeURIComponent(str)));
     }
@@ -51,9 +50,16 @@
     // โหลดตารางเรียนปัจจุบัน
     async function loadSchedule() {
         const statusEl = document.getElementById('statusMsg');
+        
+        // ดึง Token ที่เคยเซฟไว้ในเครื่องมาใส่ให้อัตโนมัติ
+        const savedToken = localStorage.getItem('gh_pat');
+        if (savedToken) {
+            document.getElementById('patToken').value = savedToken;
+        }
+
         try {
             const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${REPO_NAME}/contents/${FILE_PATH}?t=${new Date().getTime()}`);
-            if (!res.ok) throw new Error('ไม่สามารถดึงข้อมูลตารางเรียนได้ Check Username/Repo');
+            if (!res.ok) throw new Error('ไม่สามารถดึงข้อมูลตารางเรียนได้');
             
             const data = await res.json();
             fileSHA = data.sha;
@@ -72,21 +78,19 @@
             document.getElementById('scheduleForm').innerHTML = html;
             statusEl.style.display = 'none';
             document.getElementById('saveBtn').style.display = 'block';
-
-            if (localStorage.getItem('gh_pat')) {
-                document.getElementById('patToken').value = localStorage.getItem('gh_pat');
-            }
         } catch (e) {
             statusEl.innerText = '❌ เกิดข้อผิดพลาด: ' + e.message;
         }
     }
 
-    // บันทึกตารางกลับไปที่ GitHub
+    // บันทึกตารางเรียน
     async function saveSchedule() {
         const token = document.getElementById('patToken').value.trim();
-        if (!token) return alert('กรุณากรอก GitHub Personal Access Token ก่อนบันทึก!');
+        if (!token) return alert('กรุณากรอก GitHub Access Token ก่อนบันทึก!');
 
+        // บันทึก Token ลงในความจำมือถือเฉพาะเครื่องของคุณ
         localStorage.setItem('gh_pat', token);
+
         const btn = document.getElementById('saveBtn');
         btn.disabled = true;
         btn.innerText = 'กำลังบันทึก...';
@@ -114,11 +118,10 @@
             });
 
             if (res.ok) {
-                alert('✅ บันทึกตารางเรียนลง GitHub เรียบร้อยแล้ว!');
+                alert('✅ บันทึกตารางเรียนเรียบร้อยแล้ว!');
                 location.reload();
             } else {
-                const errData = await res.json();
-                alert('❌ บันทึกไม่สำเร็จ: ' + (errData.message || 'Token ไม่ถูกต้อง หรือไม่มีสิทธิ์ repo'));
+                alert('❌ บันทึกไม่สำเร็จ: Token ไม่ถูกต้อง หรือไม่มีสิทธิ์แก้ไข');
             }
         } catch (e) {
             alert('❌ เชื่อมต่อไม่ได้: ' + e.message);
