@@ -9,7 +9,7 @@ token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "").strip()
 user_id = os.environ.get("LINE_USER_ID", "").strip()
 
 # 📌 วาง URL เว็บไซต์ GitHub Pages ของคุณตรงนี้
-WEB_EDIT_URL = "https://varaleebbjaa247.github.io/Day-per-day/"
+WEB_EDIT_URL = "https://varaleebbjaa247-cmd.github.io/Day-per-day/"
 
 # โหลดข้อมูลตารางเวลา
 with open("schedule.json", "r", encoding="utf-8") as f:
