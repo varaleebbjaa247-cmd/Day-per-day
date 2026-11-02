@@ -3,7 +3,7 @@ name: Daily LINE Schedule Notifier
 on:
   workflow_dispatch:
   schedule:
-    - cron: '30 22 * * *'
+    - cron: '23 21 * * *'
 
 jobs:
   run-notifier:
